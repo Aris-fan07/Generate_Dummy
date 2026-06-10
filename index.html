@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator Data Dummy (OCR & JSON)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Tambahan Library untuk Download Preview ke Gambar -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        secondary: '#475569',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* --- TEMPLATE KTP FOTO REALISTIS (MENYESUAIKAN GAMBAR ASLI) --- */
+        .ktp-card {
+            width: 530px; /* Lebar proporsional standar KTP */
+            height: 335px; /* Tinggi proporsional standar KTP */
+            background-color: #b7ddeb; /* Warna biru muda KTP asli */
+            background-image: 
+                radial-gradient(circle at 100% 50%, rgba(255,255,255,0.3) 0%, transparent 50%),
+                radial-gradient(circle at 0% 50%, rgba(255,255,255,0.3) 0%, transparent 50%);
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            padding: 15px 25px;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #000;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            box-sizing: border-box;
+        }
+        
+        /* Watermark text buatan CSS (Mimic pola map tipis) */
+        .ktp-card::before {
+            content: 'KARTU TANDA PENDUDUK \A KARTU TANDA PENDUDUK \A KARTU TANDA PENDUDUK';
+            white-space: pre-wrap;
+            position: absolute;
+            top: 20px; left: -20px;
+            width: 150%;
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 32px;
+            font-weight: bold;
+            transform: rotate(-25deg);
+            line-height: 2.5;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .ktp-content { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column;}
+        .ktp-header { text-align: center; font-weight: bold; font-size: 16px; letter-spacing: 0.5px; margin-top: 0; margin-bottom: 15px; line-height: 1.2; color: #000; text-transform: uppercase;}
+        
+        .ktp-nik-row { display: flex; align-items: center; margin-bottom: 8px; margin-left: 0; padding-left: 0;}
+        .ktp-nik-label { font-weight: bold; font-size: 22px; width: 90px; color: #000; letter-spacing: 1px; }
+        .ktp-nik-colon { font-weight: bold; font-size: 22px; color: #000; margin-right: 15px;}
+        .ktp-nik-value { font-weight: bold; font-size: 26px; font-family: "OCR-A", "Courier New", Courier, monospace; letter-spacing: 2px; color: #000;}
+        
+        .ktp-body { display: flex; justify-content: space-between; font-size: 11px; line-height: 1.45; margin-left: 0;}
+        .ktp-data-table { border-collapse: collapse; width: 350px;}
+        /* Seluruh teks pada tabel dibuat BOLD menyesuaikan cetakan asli KTP */
+        .ktp-data-table td { vertical-align: top; padding: 1px 0; color: #000; font-weight: bold; font-family: Arial, sans-serif;} 
+        .ktp-label { width: 110px; }
+        .ktp-colon { width: 15px; text-align: center; }
+        .ktp-value { text-transform: uppercase; }
+        .ktp-indent { padding-left: 20px; }
+
+        .ktp-photo-area { width: 110px; display: flex; flex-direction: column; align-items: center; padding-top: 0; position: absolute; right: 25px; top: 90px;}
+        
+        /* Foto siluet */
+        .ktp-photo { width: 100px; height: 135px; border: 1px solid #000; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; color: rgba(255,255,255,0.9); font-size: 10px; font-weight: bold; position: relative; overflow: hidden; background-color: #ef4444;}
+        .ktp-photo-red { background-color: #b91c1c; }
+        .ktp-photo-blue { background-color: #1d4ed8; }
+        
+        .ktp-photo::before { content: ''; position: absolute; bottom: -10px; width: 80px; height: 85px; background-color: rgba(255,255,255,0.3); border-radius: 40px 40px 10px 10px; z-index: 1;}
+        .ktp-photo::after { content: ''; position: absolute; bottom: 70px; width: 45px; height: 55px; background-color: rgba(255,255,255,0.3); border-radius: 50%; z-index: 1;}
+        
+        .ktp-signature-area { text-align: center; margin-top: 5px; width: 100%;}
+        .ktp-city-date { font-size: 10px; line-height: 1.2; margin-bottom: 2px; font-weight: bold; color: #000;}
+        .ktp-ttd-box { width: 80px; height: 35px; margin: 0 auto; position: relative;}
+        .ktp-ttd-image { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
+
+        /* --- TEMPLATE KK (Sesuai PDF ilide.info-kartu-keluarga) --- */
+        .kk-document {
+            min-width: 1150px;
+            background: #ffffff;
+            border: 2px solid #000;
+            padding: 3px;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #000;
+        }
+        .kk-inner-border { border: 2px solid #000; padding: 20px; position: relative; }
+        .kk-garuda { display: none; }
+        .kk-title { text-align: center; font-size: 26px; font-weight: bold; letter-spacing: 3px; margin-bottom: 0; }
+        .kk-nomor { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 25px; }
+        
+        .kk-header-info { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 15px; font-weight: bold; }
+        .kk-header-table td { padding: 2px 4px; vertical-align: top; }
+        .kk-header-label { width: 160px; }
+        .kk-header-colon { width: 10px; }
+
+        .kk-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 12px; }
+        .kk-table th, .kk-table td { border: 1px solid #000; padding: 5px 6px; }
+        .kk-table th { background-color: transparent; text-align: center; font-weight: bold; vertical-align: middle;}
+        .kk-table td.center { text-align: center; }
+        
+        /* Baris nomor kolom persis seperti di PDF */
+        .kk-col-num td { text-align: center; padding: 2px; font-size: 10px; border-bottom: 2px solid #000; background-color: #f8fafc;}
+        
+        /* Mengatur agar tinggi sel konstan meski kosong (10 baris wajib) */
+        .kk-table tbody tr { height: 26px; }
+
+        .kk-footer { display: flex; justify-content: space-between; margin-top: 30px; font-size: 12px; padding: 0 50px; text-align: center;}
+        .kk-sign-box { width: 300px; }
+        .kk-sign-space { height: 60px; }
+        .kk-sign-name { font-weight: bold; text-decoration: underline; text-transform: uppercase; }
+        .kk-sign-nip { font-size: 11px; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-800">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-layer-group text-primary text-2xl"></i>
+                <h1 class="text-xl font-bold text-slate-900">IDGen - Data Generator</h1>
+            </div>
+            <div class="text-sm text-slate-500 font-medium hidden sm:block">
+                Template Dukcapil untuk Pengujian OCR
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Sidebar Controls -->
+            <div class="lg:col-span-3 space-y-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                    <h2 class="text-base font-semibold mb-4 border-b pb-2">Kontrol Generator</h2>
+                    
+                    <div class="space-y-4">
+                        <!-- Tombol 1: Ustadz (KTP + KK) -->
+                        <div>
+                            <button onclick="generateUstadzData()" class="w-full flex items-center justify-center gap-2 bg-primary hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm shadow">
+                                <i class="fas fa-user-tie"></i> Buat KTP & KK (Ustadz)
+                            </button>
+                        </div>
+
+                        <hr class="border-slate-200">
+
+                        <!-- Tombol 2: Santri (KK Saja) -->
+                        <div>
+                            <button onclick="generateSantriData()" class="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm shadow">
+                                <i class="fas fa-children"></i> Buat KK Saja (Santri < 15 th)
+                            </button>
+                            <div class="mt-1 flex items-start gap-2 p-2 bg-emerald-50 border border-emerald-200 rounded text-[10px] text-emerald-700">
+                                <input type="checkbox" id="useWaliMode" class="mt-0.5 rounded border-slate-300">
+                                <label for="useWaliMode" class="cursor-pointer">Aktifkan Mode Wali (Kakek/Paman/Kakak)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-slate-100">
+                        <h3 class="text-xs font-semibold text-slate-600 mb-2">Informasi Output:</h3>
+                        <ul class="text-[11px] text-slate-500 space-y-2 list-disc pl-4">
+                            <li><b>Ustadz:</b> KTP + KK sinkron (>20 thn).</li>
+                            <li><b>Santri:</b> Hanya KK, usia maksimal 15 thn. KTP tidak digenerate.</li>
+                            <li>Nama & lokasi diacak otomatis.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Output Area -->
+            <div class="lg:col-span-9 flex flex-col gap-6">
+                
+                <!-- Visual Preview Area (Top) -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                    <div class="bg-slate-50 border-b border-slate-200 px-4 pt-3 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3">
+                        <!-- TABS -->
+                        <div class="flex gap-4">
+                            <button id="tabKTP" onclick="switchTab('KTP')" class="pb-1 px-2 border-b-2 border-primary text-primary font-bold text-sm transition-all focus:outline-none">
+                                <i class="fas fa-id-card mr-1"></i> Preview KTP
+                            </button>
+                            <button id="tabKK" onclick="switchTab('KK')" class="pb-1 px-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700 font-bold text-sm transition-all focus:outline-none">
+                                <i class="fas fa-file-lines mr-1"></i> Preview KK
+                            </button>
+                        </div>
+
+                        <!-- BUTTON DOWNLOAD IMAGE -->
+                        <div class="flex gap-2">
+                            <button id="btnDownloadKTP" onclick="downloadImage('KTP')" class="hidden items-center gap-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-semibold py-1.5 px-3 rounded border border-blue-300 transition-colors">
+                                <i class="fas fa-camera"></i> Unduh Gbr KTP
+                            </button>
+                            <button id="btnDownloadKK" onclick="downloadImage('KK')" class="hidden items-center gap-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs font-semibold py-1.5 px-3 rounded border border-emerald-300 transition-colors">
+                                <i class="fas fa-camera"></i> Unduh Gbr KK
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Area Scrollable -->
+                    <div class="bg-slate-100/50 overflow-auto w-full h-[500px]" id="visualPreviewContainer">
+                        <!-- KTP Container -->
+                        <div id="ktpContainer" class="w-full h-full flex items-center justify-center p-8 transition-opacity duration-300">
+                            <span class="text-sm text-slate-400 italic text-center">Silakan buat data melalui panel di sebelah kiri.</span>
+                        </div>
+                        <!-- KK Container -->
+                        <div id="kkContainer" class="hidden w-fit min-w-full min-h-full p-8 flex flex-col items-center justify-center transition-opacity duration-300">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- JSON Output Area (Bottom) -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-800 p-3 flex flex-col sm:flex-row justify-between items-center gap-3">
+                        <h2 class="text-sm font-semibold text-slate-200"><i class="fas fa-code mr-2"></i>Data JSON Output</h2>
+                        
+                        <div class="flex gap-2">
+                            <button onclick="copyJSON()" id="copyBtn" class="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium py-1.5 px-3 rounded transition-colors disabled:opacity-50" disabled>
+                                <i class="fas fa-copy"></i> Salin JSON
+                            </button>
+                            <button onclick="downloadJSON()" id="downloadJsonBtn" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium py-1.5 px-3 rounded transition-colors disabled:opacity-50" disabled>
+                                <i class="fas fa-download"></i> Unduh JSON (.json)
+                            </button>
+                        </div>
+                    </div>
+                    <pre id="jsonOutput" class="p-4 text-xs font-mono text-green-400 bg-slate-900 overflow-y-auto h-[250px] m-0">{}</pre>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Logic JavaScript -->
+    <script>
+        // --- DATABASE DUMMY KHUSUS EMIS ---
+        const firstNamesMale = ["BUDI", "AGUS", "ANDI", "IWAN", "HENDRA", "AHMAD", "JOKO", "WAHYU", "RIZKY", "FAHMI", "YUSUF", "ILHAM"];
+        const firstNamesFemale = ["SITI", "AYU", "SRI", "NUR", "PUTRI", "DEWI", "DIAN", "RATNA", "SARI", "AISYAH", "FATIMAH"];
+        const lastNames = ["SANTOSO", "WIJAYA", "KUSUMA", "PRATAMA", "SETIAWAN", "SAPUTRA", "HIDAYAT", "NUGROHO", "SIREGAR", "HASAN", "MAULANA", "HAKIM"];
+        
+        const regions = [
+            { prov: "JAWA BARAT", kota: "BANDUNG", kec: "COBLONG", kel: "DAGO", pos: "40135" },
+            { prov: "JAWA TENGAH", kota: "BANYUMAS", kec: "PURWOKERTO SELATAN", kel: "BERKOH", pos: "53146" },
+            { prov: "JAWA TIMUR", kota: "SURABAYA", kec: "GUBENG", kel: "AIRLANGGA", pos: "60286" },
+            { prov: "DI YOGYAKARTA", kota: "SLEMAN", kec: "DEPOK", kel: "CATURTUNGGAL", pos: "55281" },
+            { prov: "DKI JAKARTA", kota: "JAKARTA SELATAN", kec: "KEBAYORAN BARU", kel: "MELAWAI", pos: "12160" }
+        ];
+
+        const bloodTypes = ["A", "B", "AB", "O", "-"];
+        const religionsEMIS = ["ISLAM", "ISLAM", "ISLAM", "ISLAM", "ISLAM", "ISLAM", "ISLAM", "ISLAM", "ISLAM", "KRISTEN"];
+
+        let currentLinkedData = null;
+
+        // --- HELPER FUNCTIONS ---
+        function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+        function randomItem(array) { return array[randomInt(0, array.length - 1)]; }
+        function padZero(num, size) { let s = num + ""; while (s.length < size) s = "0" + s; return s; }
+
+        function generateRandomDate(startYear, endYear) {
+            const year = randomInt(startYear, endYear);
+            const month = randomInt(0, 11);
+            const day = randomInt(1, 28);
+            return new Date(year, month, day);
+        }
+
+        function formatDate(dateObj) {
+            return `${padZero(dateObj.getDate(), 2)}-${padZero(dateObj.getMonth() + 1, 2)}-${dateObj.getFullYear()}`;
+        }
+
+        function updateEduAndJob(person, isUstadzPersona = false) {
+            if (!person.tanggal_lahir_raw) return;
+            
+            const currentYear = new Date().getFullYear();
+            const age = currentYear - person.tanggal_lahir_raw.getFullYear();
+            const rel = person.status_hubungan_dalam_keluarga;
+            const isFemale = person.jenis_kelamin === "PEREMPUAN";
+
+            let pendidikan = "TIDAK/BELUM SEKOLAH";
+            let pekerjaan = "BELUM/TIDAK BEKERJA";
+
+            if (age < 6) {
+                pendidikan = "TIDAK/BELUM SEKOLAH";
+                pekerjaan = "BELUM/TIDAK BEKERJA";
+            } else if (age >= 6 && age <= 11) {
+                pendidikan = randomItem(["BELUM TAMAT SD/SEDERAJAT", "TAMAT SD/SEDERAJAT"]);
+                pekerjaan = "PELAJAR/MAHASISWA";
+            } else if (age >= 12 && age <= 15) {
+                pendidikan = "SLTP/SEDERAJAT";
+                pekerjaan = "PELAJAR/MAHASISWA";
+            } else if (age >= 16 && age <= 18) {
+                pendidikan = "SLTA/SEDERAJAT";
+                pekerjaan = "PELAJAR/MAHASISWA";
+            } else {
+                pendidikan = randomItem(["SLTA/SEDERAJAT", "DIPLOMA IV/STRATA I", "STRATA II"]);
+                
+                if (isUstadzPersona) {
+                    pekerjaan = randomItem(["GURU", "USTADZ/MUBALIGH", "DOSEN"]);
+                } else if (rel === "ISTERI" || (isFemale && rel === "KEPALA KELUARGA")) {
+                    pekerjaan = Math.random() > 0.4 ? "MENGURUS RUMAH TANGGA" : randomItem(["KARYAWAN SWASTA", "GURU", "PEGAWAI NEGERI SIPIL"]);
+                } else if (rel === "KEPALA KELUARGA" || rel === "SUAMI") {
+                    pekerjaan = randomItem(["KARYAWAN SWASTA", "WIRASWASTA", "GURU", "PEGAWAI NEGERI SIPIL", "PETANI/PEKEBUN"]);
+                } else {
+                    pekerjaan = randomItem(["KARYAWAN SWASTA", "WIRASWASTA", "BELUM/TIDAK BEKERJA"]);
+                }
+            }
+
+            person.pendidikan = pendidikan;
+            person.pekerjaan = pekerjaan;
+        }
+
+        function generateNomor(dateObj, isFemale, isKK = false) {
+            const prov = padZero(randomInt(11, 94), 2);
+            const kota = padZero(randomInt(1, 71), 2);
+            const kec = padZero(randomInt(1, 99), 2);
+            
+            let dd = dateObj.getDate();
+            if (!isKK && isFemale) dd += 40; 
+            
+            const day = padZero(dd, 2);
+            const month = padZero(dateObj.getMonth() + 1, 2);
+            const year = padZero(dateObj.getFullYear() % 100, 2);
+            const seq = padZero(randomInt(1, 9999), 4);
+
+            return `${prov}${kota}${kec}${day}${month}${year}${seq}`;
+        }
+
+        function createPersonModel(role) {
+            let isFemale = Math.random() > 0.5;
+            if (role === "ISTERI" || role === "IBU") isFemale = true;
+            if (role === "SUAMI" || role === "AYAH") isFemale = false;
+
+            const firstName = isFemale ? randomItem(firstNamesFemale) : randomItem(firstNamesMale);
+            const lastName = randomItem(lastNames);
+            
+            return {
+                nama: `${firstName} ${lastName}`,
+                jenis_kelamin: isFemale ? "PEREMPUAN" : "LAKI-LAKI",
+                tempat_lahir: randomItem(regions).kota,
+                golongan_darah: randomItem(bloodTypes),
+                agama: randomItem(religionsEMIS),
+                kewarganegaraan: "WNI",
+                dokumen_imigrasi: "-",
+                status_hubungan_dalam_keluarga: role || "FAMILI LAIN"
+            };
+        }
+
+        function buildAddress() {
+            const regionInfo = randomItem(regions);
+            return {
+                alamat: `JL. PENDIDIKAN NO. ${randomInt(1, 199)}`,
+                rt_rw: `${padZero(randomInt(1, 15), 3)}/${padZero(randomInt(1, 10), 3)}`,
+                kel_desa: regionInfo.kel,
+                kecamatan: regionInfo.kec,
+                kab_kota: regionInfo.kota,
+                provinsi: regionInfo.prov,
+                kode_pos: regionInfo.pos
+            };
+        }
+
+        // ==========================================
+        // FUNGSI 1: GENERATE DATA USTADZ (KTP + KK)
+        // ==========================================
+        function generateUstadzData() {
+            const currentYear = new Date().getFullYear();
+            const address = buildAddress();
+            let anggotaKeluarga = [];
+            
+            let ustadz = createPersonModel("KEPALA KELUARGA");
+            ustadz.agama = "ISLAM"; 
+            ustadz.nama_ayah = `${randomItem(firstNamesMale)} ${randomItem(lastNames)}`;
+            ustadz.nama_ibu = `${randomItem(firstNamesFemale)} ${randomItem(lastNames)}`;
+            
+            // Ustadz normal berkeluarga (Mode Wali dipindah ke Santri)
+            ustadz.status_perkawinan = "KAWIN";
+            ustadz.tanggal_perkawinan = formatDate(generateRandomDate(1995, 2015));
+            const headAge = randomInt(35, 55);
+            ustadz.tanggal_lahir_raw = generateRandomDate(currentYear - headAge, currentYear - headAge + 1);
+            anggotaKeluarga.push(ustadz);
+
+            let spouseRole = ustadz.jenis_kelamin === "LAKI-LAKI" ? "ISTERI" : "SUAMI";
+            let spouse = createPersonModel(spouseRole);
+            spouse.status_perkawinan = "KAWIN";
+            spouse.tanggal_perkawinan = ustadz.tanggal_perkawinan;
+            spouse.nama_ayah = `${randomItem(firstNamesMale)} ${randomItem(lastNames)}`;
+            spouse.nama_ibu = `${randomItem(firstNamesFemale)} ${randomItem(lastNames)}`;
+            const spouseAge = headAge + randomInt(-5, 2);
+            spouse.tanggal_lahir_raw = generateRandomDate(currentYear - spouseAge, currentYear - spouseAge + 1);
+            anggotaKeluarga.push(spouse);
+
+            const numChildren = randomInt(1, 3);
+            let anakTemp = [];
+            for(let i=0; i<numChildren; i++) {
+                let child = createPersonModel("ANAK");
+                child.status_perkawinan = "BELUM KAWIN";
+                child.tanggal_perkawinan = "-";
+                child.nama_ayah = ustadz.jenis_kelamin === "LAKI-LAKI" ? ustadz.nama : spouse.nama;
+                child.nama_ibu = ustadz.jenis_kelamin === "PEREMPUAN" ? ustadz.nama : spouse.nama;
+                const childAge = randomInt(1, 15);
+                child.tanggal_lahir_raw = generateRandomDate(currentYear - childAge - 1, currentYear - childAge);
+                anakTemp.push(child);
+            }
+            anakTemp.sort((a, b) => a.tanggal_lahir_raw - b.tanggal_lahir_raw);
+            anakTemp.forEach(c => anggotaKeluarga.push(c));
+
+            anggotaKeluarga.forEach((a, index) => {
+                a.tanggal_lahir = formatDate(a.tanggal_lahir_raw);
+                a.nik = generateNomor(a.tanggal_lahir_raw, a.jenis_kelamin === "PEREMPUAN", false);
+                updateEduAndJob(a, index === 0);
+                delete a.tanggal_lahir_raw;
+            });
+
+            const dateKK = generateRandomDate(2021, 2023);
+            currentLinkedData = {
+                data_ktp: {
+                    jenis_dokumen: "KTP",
+                    nik: ustadz.nik,
+                    nama: ustadz.nama,
+                    tempat_lahir: ustadz.tempat_lahir,
+                    tanggal_lahir: ustadz.tanggal_lahir,
+                    jenis_kelamin: ustadz.jenis_kelamin,
+                    golongan_darah: ustadz.golongan_darah,
+                    alamat: address.alamat,
+                    rt_rw: address.rt_rw,
+                    kel_desa: address.kel_desa,
+                    kecamatan: address.kecamatan,
+                    agama: ustadz.agama,
+                    status_perkawinan: ustadz.status_perkawinan,
+                    pekerjaan: ustadz.pekerjaan,
+                    kewarganegaraan: ustadz.kewarganegaraan,
+                    berlaku_hingga: "SEUMUR HIDUP",
+                    provinsi: address.provinsi,
+                    kab_kota: address.kab_kota,
+                    tanggal_dikeluarkan: formatDate(dateKK)
+                },
+                data_kartu_keluarga: {
+                    jenis_dokumen: "KARTU KELUARGA",
+                    no_kk: generateNomor(dateKK, false, true),
+                    kepala_keluarga: ustadz.nama,
+                    alamat: address.alamat,
+                    rt_rw: address.rt_rw,
+                    kel_desa: address.kel_desa,
+                    kecamatan: address.kecamatan,
+                    kab_kota: address.kab_kota,
+                    provinsi: address.provinsi,
+                    kode_pos: address.kode_pos,
+                    anggota_keluarga: anggotaKeluarga,
+                    tanggal_dikeluarkan: formatDate(dateKK),
+                    pejabat_pengesah: "DRS. DUMMY WIDODO, M.SI",
+                    nip_pejabat: "197" + padZero(randomInt(100000000000000, 999999999999999), 15)
+                }
+            };
+
+            finishGeneration(true); // render KTP & KK
+        }
+
+        // ==========================================
+        // FUNGSI 2: GENERATE DATA SANTRI (KK SAJA)
+        // ==========================================
+        function generateSantriData() {
+            const currentYear = new Date().getFullYear();
+            const useWaliMode = document.getElementById('useWaliMode') ? document.getElementById('useWaliMode').checked : false;
+            const address = buildAddress();
+            let anggotaKeluarga = [];
+            
+            let kepalaKeluargaName = "";
+
+            if (useWaliMode) {
+                // Skenario Wali untuk Santri
+                const waliTypes = ["KAKEK_NENEK", "PAMAN_BIBI", "KAKAK"];
+                const selectedWaliType = randomItem(waliTypes);
+                
+                let headPerson = createPersonModel("KEPALA KELUARGA");
+                
+                if (selectedWaliType === "KAKEK_NENEK") {
+                    headPerson.status_perkawinan = randomItem(["KAWIN", "CERAI MATI"]);
+                    const headAge = randomInt(55, 75);
+                    headPerson.tanggal_lahir_raw = generateRandomDate(currentYear - headAge, currentYear - headAge + 1);
+                } else if (selectedWaliType === "PAMAN_BIBI") {
+                    headPerson.status_perkawinan = randomItem(["KAWIN", "BELUM KAWIN"]);
+                    const headAge = randomInt(30, 45);
+                    headPerson.tanggal_lahir_raw = generateRandomDate(currentYear - headAge, currentYear - headAge + 1);
+                } else if (selectedWaliType === "KAKAK") {
+                    headPerson.status_perkawinan = "BELUM KAWIN";
+                    headPerson.tanggal_perkawinan = "-";
+                    const headAge = randomInt(20, 25);
+                    headPerson.tanggal_lahir_raw = generateRandomDate(currentYear - headAge, currentYear - headAge + 1);
+                }
+                headPerson.nama_ayah = `${randomItem(firstNamesMale)} ${randomItem(lastNames)}`;
+                headPerson.nama_ibu = `${randomItem(firstNamesFemale)} ${randomItem(lastNames)}`;
+                anggotaKeluarga.push(headPerson);
+                kepalaKeluargaName = headPerson.nama;
+
+                if (headPerson.status_perkawinan === "KAWIN" && selectedWaliType !== "KAKAK") {
+                    let spouseRole = headPerson.jenis_kelamin === "LAKI-LAKI" ? "ISTERI" : "SUAMI";
+                    let spouse = createPersonModel(spouseRole);
+                    spouse.status_perkawinan = "KAWIN";
+                    spouse.tanggal_perkawinan = headPerson.tanggal_perkawinan || formatDate(generateRandomDate(1980, 2010));
+                    const headYear = headPerson.tanggal_lahir_raw.getFullYear();
+                    spouse.tanggal_lahir_raw = generateRandomDate(headYear - 5, headYear + 5);
+                    spouse.nama_ayah = `${randomItem(firstNamesMale)} ${randomItem(lastNames)}`;
+                    spouse.nama_ibu = `${randomItem(firstNamesFemale)} ${randomItem(lastNames)}`;
+                    anggotaKeluarga.push(spouse);
+                }
+
+                const numSantri = randomInt(1, 3);
+                let anakTemp = [];
+                const absentFather = `${randomItem(firstNamesMale)} ${randomItem(lastNames)}`;
+                const absentMother = `${randomItem(firstNamesFemale)} ${randomItem(lastNames)}`;
+                
+                for(let i=0; i<numSantri; i++) {
+                    let santri = createPersonModel("FAMILI LAIN");
+                    if (selectedWaliType === "KAKEK_NENEK") {
+                        santri.status_hubungan_dalam_keluarga = "CUCU";
+                    }
+                    santri.agama = "ISLAM";
+                    santri.status_perkawinan = "BELUM KAWIN";
+                    santri.tanggal_perkawinan = "-";
+                    santri.nama_ayah = absentFather;
+                    santri.nama_ibu = absentMother;
+                    
+                    const santriAge = randomInt(10, 15);
+                    santri.tanggal_lahir_raw = generateRandomDate(currentYear - santriAge - 1, currentYear - santriAge);
+                    anakTemp.push(santri);
+                }
+                anakTemp.sort((a, b) => a.tanggal_lahir_raw - b.tanggal_lahir_raw);
+                anakTemp.forEach(c => anggotaKeluarga.push(c));
+
+            } else {
+                // Skenario Normal (Keluarga Santri dengan Ayah & Ibu)
+                let ayah = createPersonModel("KEPALA KELUARGA");
+                ayah.jenis_kelamin = "LAKI-LAKI";
+                ayah.status_perkawinan = "KAWIN";
+                ayah.tanggal_perkawinan = formatDate(generateRandomDate(2000, 2010));
+                const ayahAge = randomInt(35, 55);
+                ayah.tanggal_lahir_raw = generateRandomDate(currentYear - ayahAge, currentYear - ayahAge + 1);
+                ayah.nama_ayah = `${randomItem(firstNamesMale)} ${randomItem(lastNames)}`;
+                ayah.nama_ibu = `${randomItem(firstNamesFemale)} ${randomItem(lastNames)}`;
+                anggotaKeluarga.push(ayah);
+                kepalaKeluargaName = ayah.nama;
+
+                let ibu = createPersonModel("ISTERI");
+                ibu.jenis_kelamin = "PEREMPUAN";
+                ibu.status_perkawinan = "KAWIN";
+                ibu.tanggal_perkawinan = ayah.tanggal_perkawinan;
+                const ibuAge = ayahAge + randomInt(-5, 2);
+                ibu.tanggal_lahir_raw = generateRandomDate(currentYear - ibuAge, currentYear - ibuAge + 1);
+                ibu.nama_ayah = `${randomItem(firstNamesMale)} ${randomItem(lastNames)}`;
+                ibu.nama_ibu = `${randomItem(firstNamesFemale)} ${randomItem(lastNames)}`;
+                anggotaKeluarga.push(ibu);
+
+                const numSantri = randomInt(1, 3);
+                let anakTemp = [];
+                for(let i=0; i<numSantri; i++) {
+                    let santri = createPersonModel("ANAK");
+                    santri.agama = "ISLAM"; 
+                    santri.status_perkawinan = "BELUM KAWIN";
+                    santri.tanggal_perkawinan = "-";
+                    santri.nama_ayah = ayah.nama;
+                    santri.nama_ibu = ibu.nama;
+                    
+                    const santriAge = randomInt(10, 15);
+                    santri.tanggal_lahir_raw = generateRandomDate(currentYear - santriAge - 1, currentYear - santriAge);
+                    anakTemp.push(santri);
+                }
+                anakTemp.sort((a, b) => a.tanggal_lahir_raw - b.tanggal_lahir_raw);
+                anakTemp.forEach(c => anggotaKeluarga.push(c));
+            }
+
+            // Format Final
+            anggotaKeluarga.forEach((a) => {
+                a.tanggal_lahir = formatDate(a.tanggal_lahir_raw);
+                a.nik = generateNomor(a.tanggal_lahir_raw, a.jenis_kelamin === "PEREMPUAN", false);
+                updateEduAndJob(a, false);
+                delete a.tanggal_lahir_raw;
+            });
+
+            const dateKK = generateRandomDate(2021, 2023);
+            currentLinkedData = {
+                data_ktp: null, 
+                data_kartu_keluarga: {
+                    jenis_dokumen: "KARTU KELUARGA",
+                    no_kk: generateNomor(dateKK, false, true),
+                    kepala_keluarga: kepalaKeluargaName,
+                    alamat: address.alamat,
+                    rt_rw: address.rt_rw,
+                    kel_desa: address.kel_desa,
+                    kecamatan: address.kecamatan,
+                    kab_kota: address.kab_kota,
+                    provinsi: address.provinsi,
+                    kode_pos: address.kode_pos,
+                    anggota_keluarga: anggotaKeluarga,
+                    tanggal_dikeluarkan: formatDate(dateKK),
+                    pejabat_pengesah: "DRS. DUMMY WIDODO, M.SI",
+                    nip_pejabat: "197" + padZero(randomInt(100000000000000, 999999999999999), 15)
+                }
+            };
+
+            finishGeneration(false); // Render KK Only
+        }
+
+        function finishGeneration(hasKtp) {
+            document.getElementById('jsonOutput').textContent = JSON.stringify(currentLinkedData, null, 4);
+            
+            // Render KK (Pasti Ada)
+            renderKK(currentLinkedData.data_kartu_keluarga);
+            document.getElementById('btnDownloadKK').classList.remove('hidden');
+            document.getElementById('btnDownloadKK').classList.add('flex');
+
+            if (hasKtp && currentLinkedData.data_ktp) {
+                renderKTP(currentLinkedData.data_ktp);
+                document.getElementById('btnDownloadKTP').classList.remove('hidden');
+                document.getElementById('btnDownloadKTP').classList.add('flex');
+                switchTab('KTP');
+            } else {
+                document.getElementById('ktpContainer').innerHTML = `
+                    <div class="text-center">
+                        <i class="fas fa-ban text-slate-300 text-5xl mb-3"></i>
+                        <h3 class="text-slate-500 font-semibold">KTP Tidak Tersedia</h3>
+                        <p class="text-xs text-slate-400 mt-1">Santri (di bawah umur 17 tahun) belum memiliki KTP.</p>
+                    </div>`;
+                document.getElementById('btnDownloadKTP').classList.remove('flex');
+                document.getElementById('btnDownloadKTP').classList.add('hidden');
+                switchTab('KK');
+            }
+            
+            // Aktifkan Tombol Copy & Unduh JSON
+            document.getElementById('copyBtn').disabled = false;
+            document.getElementById('downloadJsonBtn').disabled = false;
+        }
+
+        // --- TAB CONTROLLER ---
+        function switchTab(tabName) {
+            const btnKtp = document.getElementById('tabKTP');
+            const btnKk = document.getElementById('tabKK');
+            const ktpContainer = document.getElementById('ktpContainer');
+            const kkContainer = document.getElementById('kkContainer');
+
+            if (tabName === 'KTP') {
+                btnKtp.className = "pb-1 px-2 border-b-2 border-primary text-primary font-bold text-sm transition-all focus:outline-none";
+                btnKk.className = "pb-1 px-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700 font-bold text-sm transition-all focus:outline-none";
+                ktpContainer.classList.remove('hidden');
+                ktpContainer.classList.add('flex');
+                kkContainer.classList.add('hidden');
+                kkContainer.classList.remove('flex');
+            } else {
+                btnKk.className = "pb-1 px-2 border-b-2 border-primary text-primary font-bold text-sm transition-all focus:outline-none";
+                btnKtp.className = "pb-1 px-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700 font-bold text-sm transition-all focus:outline-none";
+                kkContainer.classList.remove('hidden');
+                kkContainer.classList.add('flex');
+                ktpContainer.classList.add('hidden');
+                ktpContainer.classList.remove('flex');
+            }
+        }
+
+        // --- RENDER VISUALS ---
+
+        function renderKTP(data) {
+            const yearStr = data.tanggal_lahir.split('-')[2];
+            const isBlue = parseInt(yearStr) % 2 === 0;
+            const photoBgClass = isBlue ? "ktp-photo-blue" : "ktp-photo-red";
+            const kotaUpper = data.kab_kota.replace("KABUPATEN", "KAB.").toUpperCase();
+
+            const html = `
+                <div class="ktp-card" id="exportKTP">
+                    <div class="ktp-content">
+                        <div class="ktp-header">PROVINSI ${data.provinsi}<br>${kotaUpper}</div>
+                        <div class="ktp-nik-row">
+                            <div class="ktp-nik-label">NIK</div><div class="ktp-nik-colon">:</div><div class="ktp-nik-value">${data.nik}</div>
+                        </div>
+                        <div class="ktp-body">
+                            <div style="flex-grow: 1;">
+                                <table class="ktp-data-table">
+                                    <tr><td class="ktp-label">Nama</td><td class="ktp-colon">:</td><td class="ktp-value">${data.nama}</td></tr>
+                                    <tr><td class="ktp-label">Tempat/Tgl Lahir</td><td class="ktp-colon">:</td><td class="ktp-value">${data.tempat_lahir}, ${data.tanggal_lahir}</td></tr>
+                                    <tr><td class="ktp-label">Jenis Kelamin</td><td class="ktp-colon">:</td><td class="ktp-value">${data.jenis_kelamin} <span style="margin-left: 18px;">Gol. Darah :</span> ${data.golongan_darah}</td></tr>
+                                    <tr><td class="ktp-label">Alamat</td><td class="ktp-colon">:</td><td class="ktp-value">${data.alamat}</td></tr>
+                                    <tr><td class="ktp-label ktp-indent">RT/RW</td><td class="ktp-colon">:</td><td class="ktp-value">${data.rt_rw}</td></tr>
+                                    <tr><td class="ktp-label ktp-indent">Kel/Desa</td><td class="ktp-colon">:</td><td class="ktp-value">${data.kel_desa}</td></tr>
+                                    <tr><td class="ktp-label ktp-indent">Kecamatan</td><td class="ktp-colon">:</td><td class="ktp-value">${data.kecamatan}</td></tr>
+                                    <tr><td class="ktp-label">Agama</td><td class="ktp-colon">:</td><td class="ktp-value">${data.agama}</td></tr>
+                                    <tr><td class="ktp-label">Status Perkawinan</td><td class="ktp-colon">:</td><td class="ktp-value">${data.status_perkawinan}</td></tr>
+                                    <tr><td class="ktp-label">Pekerjaan</td><td class="ktp-colon">:</td><td class="ktp-value">${data.pekerjaan}</td></tr>
+                                    <tr><td class="ktp-label">Kewarganegaraan</td><td class="ktp-colon">:</td><td class="ktp-value">${data.kewarganegaraan}</td></tr>
+                                    <tr><td class="ktp-label">Berlaku Hingga</td><td class="ktp-colon">:</td><td class="ktp-value">${data.berlaku_hingga}</td></tr>
+                                </table>
+                            </div>
+                            <div class="ktp-photo-area">
+                                <div class="ktp-photo ${photoBgClass}">
+                                    <span style="position:relative; z-index:2; margin-bottom: 2px;">PAS FOTO</span>
+                                </div>
+                                <div class="ktp-signature-area">
+                                    <div class="ktp-city-date">${kotaUpper}<br>${data.tanggal_dikeluarkan}</div>
+                                    <div class="ktp-ttd-box">
+                                        <!-- Menggunakan Tanda Tangan SVG Murni -->
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 40" class="ktp-ttd-image">
+                                            <path d="M10,25 C15,10 25,5 30,20 C35,35 45,30 50,15 C55,0 65,10 70,25 C75,40 85,35 90,20" stroke="#000" fill="none" stroke-width="2.5" stroke-linecap="round"/>
+                                            <path d="M25,25 L45,15" stroke="#000" fill="none" stroke-width="1.5"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('ktpContainer').innerHTML = html;
+        }
+
+        function renderKK(data) {
+            let table1Rows = '';
+            for (let i = 0; i < 10; i++) { 
+                if (i < data.anggota_keluarga.length) {
+                    let a = data.anggota_keluarga[i];
+                    table1Rows += `
+                        <tr>
+                            <td class="center">${i+1}</td>
+                            <td>${a.nama}</td>
+                            <td class="center" style="font-family: monospace; letter-spacing: 1px;">${a.nik}</td>
+                            <td>${a.jenis_kelamin}</td>
+                            <td>${a.tempat_lahir}</td>
+                            <td class="center">${a.tanggal_lahir}</td>
+                            <td>${a.agama}</td>
+                            <td>${a.pendidikan}</td>
+                            <td>${a.pekerjaan}</td>
+                        </tr>
+                    `;
+                } else {
+                    table1Rows += `<tr><td class="center">${i+1}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+                }
+            }
+
+            let table2Rows = '';
+            for (let i = 0; i < 10; i++) { 
+                if (i < data.anggota_keluarga.length) {
+                    let a = data.anggota_keluarga[i];
+                    table2Rows += `
+                        <tr>
+                            <td class="center">${i+1}</td>
+                            <td>${a.status_perkawinan}</td>
+                            <td class="center">${a.tanggal_perkawinan}</td>
+                            <td>${a.status_hubungan_dalam_keluarga}</td>
+                            <td class="center">${a.kewarganegaraan}</td>
+                            <td></td> <td></td> 
+                            <td>${a.nama_ayah}</td>
+                            <td>${a.nama_ibu}</td>
+                        </tr>
+                    `;
+                } else {
+                    table2Rows += `<tr><td class="center">${i+1}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+                }
+            }
+
+            const html = `
+                <div class="kk-document" id="exportKK">
+                    <div class="kk-inner-border">
+                        <h1 class="kk-title">KARTU KELUARGA</h1>
+                        <h2 class="kk-nomor">No. ${data.no_kk}</h2>
+                        
+                        <div class="kk-header-info">
+                            <table class="kk-header-table">
+                                <tr><td class="kk-header-label">Nama Kepala Keluarga</td><td class="kk-header-colon">:</td><td>${data.kepala_keluarga}</td></tr>
+                                <tr><td class="kk-header-label">Alamat</td><td class="kk-header-colon">:</td><td>${data.alamat}</td></tr>
+                                <tr><td class="kk-header-label">RT/RW</td><td class="kk-header-colon">:</td><td>${data.rt_rw}</td></tr>
+                                <tr><td class="kk-header-label">Kode Pos</td><td class="kk-header-colon">:</td><td>${data.kode_pos}</td></tr>
+                            </table>
+                            <table class="kk-header-table">
+                                <tr><td class="kk-header-label">Desa/Kelurahan</td><td class="kk-header-colon">:</td><td>${data.kel_desa}</td></tr>
+                                <tr><td class="kk-header-label">Kecamatan</td><td class="kk-header-colon">:</td><td>${data.kecamatan}</td></tr>
+                                <tr><td class="kk-header-label">Kabupaten/Kota</td><td class="kk-header-colon">:</td><td>${data.kab_kota}</td></tr>
+                                <tr><td class="kk-header-label">Provinsi</td><td class="kk-header-colon">:</td><td>${data.provinsi}</td></tr>
+                            </table>
+                        </div>
+
+                        <table class="kk-table">
+                            <thead>
+                                <tr>
+                                    <th width="3%">No.</th><th width="20%">Nama Lengkap</th><th width="15%">NIK</th><th width="10%">Jenis Kelamin</th>
+                                    <th width="12%">Tempat Lahir</th><th width="10%">Tanggal Lahir</th><th width="8%">Agama</th><th width="12%">Pendidikan</th><th width="10%">Jenis Pekerjaan</th>
+                                </tr>
+                                <tr class="kk-col-num"><td>(1)</td><td>(2)</td><td>(3)</td><td>(4)</td><td>(5)</td><td>(6)</td><td>(7)</td><td>(8)</td><td>(9)</td></tr>
+                            </thead>
+                            <tbody>${table1Rows}</tbody>
+                        </table>
+
+                        <table class="kk-table">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" width="3%">No.</th><th rowspan="2" width="12%">Status Perkawinan</th><th rowspan="2" width="10%">Tanggal Perkawinan</th>
+                                    <th rowspan="2" width="15%">Status Hubungan Dalam Keluarga</th><th rowspan="2" width="10%">Kewarganegaraan</th>
+                                    <th colspan="2">Dokumen Imigrasi</th><th colspan="2">Nama Orang Tua</th>
+                                </tr>
+                                <tr>
+                                    <th width="8%">No. Paspor</th><th width="8%">No. KITAP</th><th width="17%">Ayah</th><th width="17%">Ibu</th>
+                                </tr>
+                                <tr class="kk-col-num"><td></td><td>(10)</td><td>(11)</td><td>(12)</td><td>(13)</td><td>(14)</td><td>(15)</td><td>(16)</td><td>(17)</td></tr>
+                            </thead>
+                            <tbody>${table2Rows}</tbody>
+                        </table>
+
+                        <div class="kk-footer">
+                            <div class="kk-sign-box">
+                                <br><div>KEPALA KELUARGA</div><div class="kk-sign-space"></div>
+                                <div class="kk-sign-name">${data.kepala_keluarga}</div>
+                                <div>Tanda Tangan/Cap Jempol</div>
+                            </div>
+                            <div class="kk-sign-box">
+                                <div>Dikeluarkan Tanggal : ${data.tanggal_dikeluarkan}</div>
+                                <div>KEPALA DINAS KEPENDUDUKAN DAN PENCATATAN SIPIL</div>
+                                <div>KABUPATEN ${data.kab_kota.replace("KABUPATEN ", "")}</div>
+                                <div class="kk-sign-space"></div>
+                                <div class="kk-sign-name">${data.pejabat_pengesah}</div>
+                                <div>NIP. ${data.nip_pejabat}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('kkContainer').innerHTML = html;
+        }
+
+        // --- EXPORT & DOWNLOAD FUNCTIONS ---
+        
+        async function copyJSON() {
+            if (!currentLinkedData) return;
+            const jsonString = JSON.stringify(currentLinkedData, null, 2);
+            const copyBtn = document.getElementById('copyBtn');
+            try {
+                await navigator.clipboard.writeText(jsonString);
+                copyBtn.innerHTML = '<i class="fas fa-check"></i> Tersalin!';
+                setTimeout(() => { copyBtn.innerHTML = '<i class="fas fa-copy"></i> Salin JSON'; }, 2000);
+            } catch (err) {
+                const textArea = document.createElement("textarea");
+                textArea.value = jsonString; document.body.appendChild(textArea); textArea.select();
+                try { document.execCommand('copy'); copyBtn.innerHTML = '<i class="fas fa-check"></i> Tersalin!'; } catch (e) { alert("Gagal menyalin."); }
+                document.body.removeChild(textArea);
+            }
+        }
+
+        function downloadJSON() {
+            if (!currentLinkedData) return;
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentLinkedData, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", `dummy_data_${new Date().getTime()}.json`);
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        async function downloadImage(type) {
+            const targetId = type === 'KTP' ? 'exportKTP' : 'exportKK';
+            const element = document.getElementById(targetId);
+            if (!element) {
+                alert(`Elemen ${type} tidak ditemukan atau belum dirender.`);
+                return;
+            }
+
+            // Ganti tombol menjadi loading
+            const btn = document.getElementById(`btnDownload${type}`);
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+            btn.disabled = true;
+
+            try {
+                // Menggunakan html2canvas untuk merender div menjadi gambar.
+                // useCORS diaktifkan agar bisa memproses gambar background KTP dari URL.
+                const canvas = await html2canvas(element, { 
+                    scale: 2, // Scale 2 agar gambar resolusinya tinggi (HD) untuk OCR
+                    useCORS: true,
+                    backgroundColor: "#ffffff"
+                });
+
+                const link = document.createElement('a');
+                link.download = `Dummy_${type}_${new Date().getTime()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } catch (err) {
+                console.error("Gagal mengunduh gambar:", err);
+                alert("Terjadi kesalahan saat mengekspor gambar.");
+            } finally {
+                // Kembalikan tombol ke semula
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
