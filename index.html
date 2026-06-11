@@ -180,7 +180,7 @@
                     <div class="mt-6 pt-4 border-t border-slate-100">
                         <h3 class="text-xs font-semibold text-slate-600 mb-2">Informasi Output:</h3>
                         <ul class="text-[11px] text-slate-500 space-y-2 list-disc pl-4">
-                            <li><b>Ustadz:</b> KTP + KK sinkron (>20 thn).</li>
+                            <li><b>Ustadz:</b> KTP diambil acak dari Suami/Istri/Anak (>20 thn). Kepala Keluarga tetap Ayah.</li>
                             <li><b>Santri:</b> Hanya KK, usia maksimal 15 thn. KTP tidak digenerate.</li>
                             <li>Nama & lokasi diacak otomatis.</li>
                         </ul>
@@ -383,68 +383,105 @@
             const address = buildAddress();
             let anggotaKeluarga = [];
             
-            let ustadz = createPersonModel("KEPALA KELUARGA");
-            ustadz.agama = "ISLAM"; 
-            ustadz.nama_ayah = `${randomItem(firstNamesMale)} ${randomItem(lastNames)}`;
-            ustadz.nama_ibu = `${randomItem(firstNamesFemale)} ${randomItem(lastNames)}`;
+            // Pilih secara acak siapa yang menjadi Ustadz (yang dicetak KTP-nya)
+            const ustadzTarget = randomItem(["KEPALA KELUARGA", "ISTERI", "ANAK"]);
             
-            // Ustadz normal berkeluarga (Mode Wali dipindah ke Santri)
-            ustadz.status_perkawinan = "KAWIN";
-            ustadz.tanggal_perkawinan = formatDate(generateRandomDate(1995, 2015));
-            const headAge = randomInt(35, 55);
-            ustadz.tanggal_lahir_raw = generateRandomDate(currentYear - headAge, currentYear - headAge + 1);
-            anggotaKeluarga.push(ustadz);
+            // 1. Ayah (Selalu menjadi Kepala Keluarga)
+            let ayah = createPersonModel("KEPALA KELUARGA");
+            ayah.jenis_kelamin = "LAKI-LAKI";
+            ayah.status_perkawinan = "KAWIN";
+            ayah.tanggal_perkawinan = formatDate(generateRandomDate(1995, 2005));
+            const ayahAge = randomInt(45, 60); // Rentang usia logis untuk memiliki anak 20+ tahun
+            ayah.tanggal_lahir_raw = generateRandomDate(currentYear - ayahAge, currentYear - ayahAge + 1);
+            ayah.nama_ayah = `${randomItem(firstNamesMale)} ${randomItem(lastNames)}`;
+            ayah.nama_ibu = `${randomItem(firstNamesFemale)} ${randomItem(lastNames)}`;
+            
+            if (ustadzTarget === "KEPALA KELUARGA") {
+                ayah._isUstadzPersona = true;
+                ayah.agama = "ISLAM";
+            }
+            anggotaKeluarga.push(ayah);
 
-            let spouseRole = ustadz.jenis_kelamin === "LAKI-LAKI" ? "ISTERI" : "SUAMI";
-            let spouse = createPersonModel(spouseRole);
-            spouse.status_perkawinan = "KAWIN";
-            spouse.tanggal_perkawinan = ustadz.tanggal_perkawinan;
-            spouse.nama_ayah = `${randomItem(firstNamesMale)} ${randomItem(lastNames)}`;
-            spouse.nama_ibu = `${randomItem(firstNamesFemale)} ${randomItem(lastNames)}`;
-            const spouseAge = headAge + randomInt(-5, 2);
-            spouse.tanggal_lahir_raw = generateRandomDate(currentYear - spouseAge, currentYear - spouseAge + 1);
-            anggotaKeluarga.push(spouse);
+            // 2. Ibu (Selalu Isteri)
+            let ibu = createPersonModel("ISTERI");
+            ibu.jenis_kelamin = "PEREMPUAN";
+            ibu.status_perkawinan = "KAWIN";
+            ibu.tanggal_perkawinan = ayah.tanggal_perkawinan;
+            const ibuAge = ayahAge + randomInt(-5, 2);
+            ibu.tanggal_lahir_raw = generateRandomDate(currentYear - ibuAge, currentYear - ibuAge + 1);
+            ibu.nama_ayah = `${randomItem(firstNamesMale)} ${randomItem(lastNames)}`;
+            ibu.nama_ibu = `${randomItem(firstNamesFemale)} ${randomItem(lastNames)}`;
+            
+            if (ustadzTarget === "ISTERI") {
+                ibu._isUstadzPersona = true;
+                ibu.agama = "ISLAM";
+            }
+            anggotaKeluarga.push(ibu);
 
+            // 3. Anak (1 sampai 3 Anak)
             const numChildren = randomInt(1, 3);
             let anakTemp = [];
+            let isAnakTargeted = false;
+
             for(let i=0; i<numChildren; i++) {
                 let child = createPersonModel("ANAK");
                 child.status_perkawinan = "BELUM KAWIN";
                 child.tanggal_perkawinan = "-";
-                child.nama_ayah = ustadz.jenis_kelamin === "LAKI-LAKI" ? ustadz.nama : spouse.nama;
-                child.nama_ibu = ustadz.jenis_kelamin === "PEREMPUAN" ? ustadz.nama : spouse.nama;
-                const childAge = randomInt(1, 15);
+                child.nama_ayah = ayah.nama;
+                child.nama_ibu = ibu.nama;
+                
+                let childAge;
+                if (ustadzTarget === "ANAK" && !isAnakTargeted) {
+                    // Jika anak terpilih sebagai Ustadz, usia diatur minimal 20 tahun
+                    childAge = randomInt(20, ayahAge - 22); 
+                    child._isUstadzPersona = true;
+                    child.agama = "ISLAM";
+                    isAnakTargeted = true;
+                } else {
+                    // Anak lainnya usia normal (di bawah 20)
+                    childAge = randomInt(1, 19);
+                }
                 child.tanggal_lahir_raw = generateRandomDate(currentYear - childAge - 1, currentYear - childAge);
                 anakTemp.push(child);
             }
+            
+            // Urutkan anak berdasarkan usia (paling tua di atas)
             anakTemp.sort((a, b) => a.tanggal_lahir_raw - b.tanggal_lahir_raw);
             anakTemp.forEach(c => anggotaKeluarga.push(c));
+
+            let selectedUstadz = null;
 
             anggotaKeluarga.forEach((a, index) => {
                 a.tanggal_lahir = formatDate(a.tanggal_lahir_raw);
                 a.nik = generateNomor(a.tanggal_lahir_raw, a.jenis_kelamin === "PEREMPUAN", false);
-                updateEduAndJob(a, index === 0);
+                updateEduAndJob(a, a._isUstadzPersona); // Trigger pekerjaan Ustadz jika true
+                
+                if (a._isUstadzPersona) {
+                    selectedUstadz = { ...a };
+                }
+                
                 delete a.tanggal_lahir_raw;
+                delete a._isUstadzPersona;
             });
 
             const dateKK = generateRandomDate(2021, 2023);
             currentLinkedData = {
                 data_ktp: {
                     jenis_dokumen: "KTP",
-                    nik: ustadz.nik,
-                    nama: ustadz.nama,
-                    tempat_lahir: ustadz.tempat_lahir,
-                    tanggal_lahir: ustadz.tanggal_lahir,
-                    jenis_kelamin: ustadz.jenis_kelamin,
-                    golongan_darah: ustadz.golongan_darah,
+                    nik: selectedUstadz.nik,
+                    nama: selectedUstadz.nama,
+                    tempat_lahir: selectedUstadz.tempat_lahir,
+                    tanggal_lahir: selectedUstadz.tanggal_lahir,
+                    jenis_kelamin: selectedUstadz.jenis_kelamin,
+                    golongan_darah: selectedUstadz.golongan_darah,
                     alamat: address.alamat,
                     rt_rw: address.rt_rw,
                     kel_desa: address.kel_desa,
                     kecamatan: address.kecamatan,
-                    agama: ustadz.agama,
-                    status_perkawinan: ustadz.status_perkawinan,
-                    pekerjaan: ustadz.pekerjaan,
-                    kewarganegaraan: ustadz.kewarganegaraan,
+                    agama: selectedUstadz.agama,
+                    status_perkawinan: selectedUstadz.status_perkawinan,
+                    pekerjaan: selectedUstadz.pekerjaan,
+                    kewarganegaraan: selectedUstadz.kewarganegaraan,
                     berlaku_hingga: "SEUMUR HIDUP",
                     provinsi: address.provinsi,
                     kab_kota: address.kab_kota,
@@ -453,7 +490,7 @@
                 data_kartu_keluarga: {
                     jenis_dokumen: "KARTU KELUARGA",
                     no_kk: generateNomor(dateKK, false, true),
-                    kepala_keluarga: ustadz.nama,
+                    kepala_keluarga: ayah.nama,
                     alamat: address.alamat,
                     rt_rw: address.rt_rw,
                     kel_desa: address.kel_desa,
