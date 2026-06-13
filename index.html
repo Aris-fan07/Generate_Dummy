@@ -182,7 +182,7 @@
                         <ul class="text-[11px] text-slate-500 space-y-2 list-disc pl-4">
                             <li><b>Ustadz:</b> KTP diambil acak dari Suami/Istri/Anak (>20 thn). Kepala Keluarga tetap Ayah.</li>
                             <li><b>Santri:</b> Hanya KK, usia maksimal 15 thn. KTP tidak digenerate.</li>
-                            <li>Nama & lokasi diacak otomatis.</li>
+                            <li>Nama & lokasi diacak otomatis seluruh Indonesia.</li>
                         </ul>
                     </div>
                 </div>
@@ -251,21 +251,61 @@
 
     <!-- Logic JavaScript -->
     <script>
-        // --- DATABASE DUMMY KHUSUS EMIS ---
-        const firstNamesMale = ["BUDI", "AGUS", "ANDI", "IWAN", "HENDRA", "AHMAD", "JOKO", "WAHYU", "RIZKY", "FAHMI", "YUSUF", "ILHAM"];
-        const firstNamesFemale = ["SITI", "AYU", "SRI", "NUR", "PUTRI", "DEWI", "DIAN", "RATNA", "SARI", "AISYAH", "FATIMAH"];
-        const lastNames = ["SANTOSO", "WIJAYA", "KUSUMA", "PRATAMA", "SETIAWAN", "SAPUTRA", "HIDAYAT", "NUGROHO", "SIREGAR", "HASAN", "MAULANA", "HAKIM"];
+        // --- DATABASE DUMMY YANG DIPERLUAS ---
+        const firstNamesMale = [
+            "MUHAMMAD", "AHMAD", "RIZKY", "FAJAR", "DIMAS", "ARYA", "FARHAN", "ADITYA", "KEVIN", "NAUFAL", "ZAKI", "RAIHAN", "GILANG", "DIKA", 
+            "BUDI", "AGUS", "ANDI", "IWAN", "HENDRA", "JOKO", "WAHYU", "FAHMI", "YUSUF", "ILHAM", "REZA", "BAGUS", "DANI", "BAYU", "DONI", "ALDI", "FAIZ", "IQBAL", "RENDY"
+        ];
+        const firstNamesFemale = [
+            "SITI", "AYU", "SRI", "NUR", "PUTRI", "DEWI", "DIAN", "RATNA", "SARI", "AISYAH", "FATIMAH", "NABILA", "DINDA", "AULIA", "ZAHRA", 
+            "SALSABILA", "ANNISA", "NADIA", "RINA", "MAYA", "FITRI", "MELATI", "INTAN", "VINA", "NITA", "LIA", "SINTA", "MUTIA", "AMELIA", "RAHMA"
+        ];
+        const lastNames = [
+            "SANTOSO", "WIJAYA", "KUSUMA", "PRATAMA", "SETIAWAN", "SAPUTRA", "HIDAYAT", "NUGROHO", "SIREGAR", "HASAN", "MAULANA", "HAKIM", 
+            "WIBOWO", "FIRMANSYAH", "GUNAWAN", "PURNOMO", "HALIM", "SINAGA", "HUTAGALUNG", "MANURUNG", "MARPAUNG", "SIMANJUNTAK", "NASUTION", "BATUBARA", 
+            "TARIGAN", "GINTING", "SITUMORANG", "SURYONO", "HARTONO", "SUKAMTO", "PANGGABEAN", "HASIBUAN"
+        ];
         
+        // Daerah Mewakili Seluruh Pulau Besar & Provinsi di Indonesia
         const regions = [
+            { prov: "ACEH", kota: "BANDA ACEH", kec: "BAITURRAHMAN", kel: "KAMPUNG BARU", pos: "23242" },
+            { prov: "SUMATERA UTARA", kota: "MEDAN", kec: "MEDAN BARAT", kel: "KESAWAN", pos: "20111" },
+            { prov: "SUMATERA BARAT", kota: "PADANG", kec: "PADANG BARAT", kel: "BELAKANG TANGSI", pos: "25114" },
+            { prov: "RIAU", kota: "PEKANBARU", kec: "TAMPAN", kel: "SIMPANG BARU", pos: "28293" },
+            { prov: "SUMATERA SELATAN", kota: "PALEMBANG", kec: "ILIR BARAT I", kel: "LOROK PAKJO", pos: "30137" },
+            { prov: "LAMPUNG", kota: "BANDAR LAMPUNG", kec: "TANJUNG KARANG PUSAT", kel: "PALAPA", pos: "35119" },
+            { prov: "BANTEN", kota: "TANGERANG SELATAN", kec: "PONDOK AREN", kel: "PONDOK JAYA", pos: "15224" },
+            { prov: "DKI JAKARTA", kota: "JAKARTA SELATAN", kec: "KEBAYORAN BARU", kel: "MELAWAI", pos: "12160" },
             { prov: "JAWA BARAT", kota: "BANDUNG", kec: "COBLONG", kel: "DAGO", pos: "40135" },
-            { prov: "JAWA TENGAH", kota: "BANYUMAS", kec: "PURWOKERTO SELATAN", kel: "BERKOH", pos: "53146" },
-            { prov: "JAWA TIMUR", kota: "SURABAYA", kec: "GUBENG", kel: "AIRLANGGA", pos: "60286" },
+            { prov: "JAWA TENGAH", kota: "SEMARANG", kec: "SEMARANG TENGAH", kel: "PENDRIKAN KIDUL", pos: "50131" },
             { prov: "DI YOGYAKARTA", kota: "SLEMAN", kec: "DEPOK", kel: "CATURTUNGGAL", pos: "55281" },
-            { prov: "DKI JAKARTA", kota: "JAKARTA SELATAN", kec: "KEBAYORAN BARU", kel: "MELAWAI", pos: "12160" }
+            { prov: "JAWA TIMUR", kota: "SURABAYA", kec: "GUBENG", kel: "AIRLANGGA", pos: "60286" },
+            { prov: "BALI", kota: "DENPASAR", kec: "DENPASAR SELATAN", kel: "SANUR", pos: "80227" },
+            { prov: "NUSA TENGGARA BARAT", kota: "MATARAM", kec: "SEKARBELA", kel: "KARANG PULE", pos: "83116" },
+            { prov: "NUSA TENGGARA TIMUR", kota: "KUPANG", kec: "OEBOBO", kel: "FATULULI", pos: "85111" },
+            { prov: "KALIMANTAN BARAT", kota: "PONTIANAK", kec: "PONTIANAK SELATAN", kel: "KOTA BARU", pos: "78114" },
+            { prov: "KALIMANTAN TIMUR", kota: "SAMARINDA", kec: "SAMARINDA ULU", kel: "JAWA", pos: "75122" },
+            { prov: "KALIMANTAN SELATAN", kota: "BANJARMASIN", kec: "BANJARMASIN TENGAH", kel: "MAWAR", pos: "70114" },
+            { prov: "SULAWESI SELATAN", kota: "MAKASSAR", kec: "PANAKKUKANG", kel: "MASALE", pos: "90231" },
+            { prov: "SULAWESI UTARA", kota: "MANADO", kec: "SARIO", kel: "SARIO UTARA", pos: "95114" },
+            { prov: "MALUKU", kota: "AMBON", kec: "SIRI MAU", kel: "RIJALI", pos: "97128" },
+            { prov: "PAPUA", kota: "JAYAPURA", kec: "JAYAPURA SELATAN", kel: "ENTROP", pos: "99224" },
+            { prov: "PAPUA BARAT", kota: "SORONG", kec: "SORONG MANOI", kel: "KLALIGI", pos: "98412" }
         ];
 
         const bloodTypes = ["A", "B", "AB", "O", "-"];
-        const religionsEMIS = ["ISLAM", "ISLAM", "ISLAM", "ISLAM", "ISLAM", "ISLAM", "ISLAM", "ISLAM", "ISLAM", "KRISTEN"];
+        const religionsEMIS = ["ISLAM", "ISLAM", "ISLAM", "ISLAM", "ISLAM", "ISLAM", "ISLAM", "ISLAM", "ISLAM", "KRISTEN", "KATOLIK"];
+
+        // Variasi Pekerjaan yang Jauh Lebih Banyak
+        const commonJobsMale = [
+            "KARYAWAN SWASTA", "WIRASWASTA", "PEGAWAI NEGERI SIPIL", "PETANI/PEKEBUN", "BURUH HARIAN LEPAS", 
+            "SOPIR", "TUKANG KAYU", "TUKANG BATU", "PEDAGANG", "TENTARA NASIONAL INDONESIA", "KEPOLISIAN RI", "DOKTER", "PERAWAT", "MEKANIK"
+        ];
+        const commonJobsFemale = [
+            "MENGURUS RUMAH TANGGA", "KARYAWAN SWASTA", "PEGAWAI NEGERI SIPIL", "GURU", "BIDAN", 
+            "PERAWAT", "PEDAGANG", "WIRASWASTA", "PEMBANTU RUMAH TANGGA", "DOKTER"
+        ];
+        const ustadzJobs = ["GURU", "USTADZ/MUBALIGH", "DOSEN", "PENGASUH PESANTREN", "PENCERAMAH"];
 
         let currentLinkedData = null;
 
@@ -312,13 +352,13 @@
                 pendidikan = randomItem(["SLTA/SEDERAJAT", "DIPLOMA IV/STRATA I", "STRATA II"]);
                 
                 if (isUstadzPersona) {
-                    pekerjaan = randomItem(["GURU", "USTADZ/MUBALIGH", "DOSEN"]);
+                    pekerjaan = randomItem(ustadzJobs);
                 } else if (rel === "ISTERI" || (isFemale && rel === "KEPALA KELUARGA")) {
-                    pekerjaan = Math.random() > 0.4 ? "MENGURUS RUMAH TANGGA" : randomItem(["KARYAWAN SWASTA", "GURU", "PEGAWAI NEGERI SIPIL"]);
+                    pekerjaan = Math.random() > 0.3 ? "MENGURUS RUMAH TANGGA" : randomItem(commonJobsFemale);
                 } else if (rel === "KEPALA KELUARGA" || rel === "SUAMI") {
-                    pekerjaan = randomItem(["KARYAWAN SWASTA", "WIRASWASTA", "GURU", "PEGAWAI NEGERI SIPIL", "PETANI/PEKEBUN"]);
+                    pekerjaan = randomItem(commonJobsMale);
                 } else {
-                    pekerjaan = randomItem(["KARYAWAN SWASTA", "WIRASWASTA", "BELUM/TIDAK BEKERJA"]);
+                    pekerjaan = isFemale ? randomItem(commonJobsFemale) : randomItem(commonJobsMale);
                 }
             }
 
@@ -391,7 +431,7 @@
             ayah.jenis_kelamin = "LAKI-LAKI";
             ayah.status_perkawinan = "KAWIN";
             ayah.tanggal_perkawinan = formatDate(generateRandomDate(1995, 2005));
-            const ayahAge = randomInt(45, 60); // Rentang usia logis untuk memiliki anak 20+ tahun
+            const ayahAge = randomInt(45, 60); 
             ayah.tanggal_lahir_raw = generateRandomDate(currentYear - ayahAge, currentYear - ayahAge + 1);
             ayah.nama_ayah = `${randomItem(firstNamesMale)} ${randomItem(lastNames)}`;
             ayah.nama_ibu = `${randomItem(firstNamesFemale)} ${randomItem(lastNames)}`;
@@ -432,20 +472,17 @@
                 
                 let childAge;
                 if (ustadzTarget === "ANAK" && !isAnakTargeted) {
-                    // Jika anak terpilih sebagai Ustadz, usia diatur minimal 20 tahun
                     childAge = randomInt(20, ayahAge - 22); 
                     child._isUstadzPersona = true;
                     child.agama = "ISLAM";
                     isAnakTargeted = true;
                 } else {
-                    // Anak lainnya usia normal (di bawah 20)
                     childAge = randomInt(1, 19);
                 }
                 child.tanggal_lahir_raw = generateRandomDate(currentYear - childAge - 1, currentYear - childAge);
                 anakTemp.push(child);
             }
             
-            // Urutkan anak berdasarkan usia (paling tua di atas)
             anakTemp.sort((a, b) => a.tanggal_lahir_raw - b.tanggal_lahir_raw);
             anakTemp.forEach(c => anggotaKeluarga.push(c));
 
@@ -454,7 +491,7 @@
             anggotaKeluarga.forEach((a, index) => {
                 a.tanggal_lahir = formatDate(a.tanggal_lahir_raw);
                 a.nik = generateNomor(a.tanggal_lahir_raw, a.jenis_kelamin === "PEREMPUAN", false);
-                updateEduAndJob(a, a._isUstadzPersona); // Trigger pekerjaan Ustadz jika true
+                updateEduAndJob(a, a._isUstadzPersona); 
                 
                 if (a._isUstadzPersona) {
                     selectedUstadz = { ...a };
@@ -505,7 +542,7 @@
                 }
             };
 
-            finishGeneration(true); // render KTP & KK
+            finishGeneration(true); 
         }
 
         // ==========================================
@@ -520,7 +557,6 @@
             let kepalaKeluargaName = "";
 
             if (useWaliMode) {
-                // Skenario Wali untuk Santri
                 const waliTypes = ["KAKEK_NENEK", "PAMAN_BIBI", "KAKAK"];
                 const selectedWaliType = randomItem(waliTypes);
                 
@@ -581,7 +617,6 @@
                 anakTemp.forEach(c => anggotaKeluarga.push(c));
 
             } else {
-                // Skenario Normal (Keluarga Santri dengan Ayah & Ibu)
                 let ayah = createPersonModel("KEPALA KELUARGA");
                 ayah.jenis_kelamin = "LAKI-LAKI";
                 ayah.status_perkawinan = "KAWIN";
@@ -621,7 +656,6 @@
                 anakTemp.forEach(c => anggotaKeluarga.push(c));
             }
 
-            // Format Final
             anggotaKeluarga.forEach((a) => {
                 a.tanggal_lahir = formatDate(a.tanggal_lahir_raw);
                 a.nik = generateNomor(a.tanggal_lahir_raw, a.jenis_kelamin === "PEREMPUAN", false);
@@ -650,13 +684,12 @@
                 }
             };
 
-            finishGeneration(false); // Render KK Only
+            finishGeneration(false); 
         }
 
         function finishGeneration(hasKtp) {
             document.getElementById('jsonOutput').textContent = JSON.stringify(currentLinkedData, null, 4);
             
-            // Render KK (Pasti Ada)
             renderKK(currentLinkedData.data_kartu_keluarga);
             document.getElementById('btnDownloadKK').classList.remove('hidden');
             document.getElementById('btnDownloadKK').classList.add('flex');
@@ -678,7 +711,6 @@
                 switchTab('KK');
             }
             
-            // Aktifkan Tombol Copy & Unduh JSON
             document.getElementById('copyBtn').disabled = false;
             document.getElementById('downloadJsonBtn').disabled = false;
         }
@@ -746,7 +778,6 @@
                                 <div class="ktp-signature-area">
                                     <div class="ktp-city-date">${kotaUpper}<br>${data.tanggal_dikeluarkan}</div>
                                     <div class="ktp-ttd-box">
-                                        <!-- Menggunakan Tanda Tangan SVG Murni -->
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 40" class="ktp-ttd-image">
                                             <path d="M10,25 C15,10 25,5 30,20 C35,35 45,30 50,15 C55,0 65,10 70,25 C75,40 85,35 90,20" stroke="#000" fill="none" stroke-width="2.5" stroke-linecap="round"/>
                                             <path d="M25,25 L45,15" stroke="#000" fill="none" stroke-width="1.5"/>
@@ -910,17 +941,14 @@
                 return;
             }
 
-            // Ganti tombol menjadi loading
             const btn = document.getElementById(`btnDownload${type}`);
             const originalHTML = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
             btn.disabled = true;
 
             try {
-                // Menggunakan html2canvas untuk merender div menjadi gambar.
-                // useCORS diaktifkan agar bisa memproses gambar background KTP dari URL.
                 const canvas = await html2canvas(element, { 
-                    scale: 2, // Scale 2 agar gambar resolusinya tinggi (HD) untuk OCR
+                    scale: 2, 
                     useCORS: true,
                     backgroundColor: "#ffffff"
                 });
@@ -933,7 +961,6 @@
                 console.error("Gagal mengunduh gambar:", err);
                 alert("Terjadi kesalahan saat mengekspor gambar.");
             } finally {
-                // Kembalikan tombol ke semula
                 btn.innerHTML = originalHTML;
                 btn.disabled = false;
             }
